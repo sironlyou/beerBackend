@@ -15,8 +15,6 @@ import bodyParser, { json } from "body-parser";
 import cookieParser from "cookie-parser";
 const EasyYandexS3 = require("easy-yandex-s3").default;
 
-const MONGODB =
-  "mongodb+srv://sironlyou:a2251616A@cluster0.0i70xle.mongodb.net/?retryWrites=true&w=majority";
 
 // startStandaloneServer(server, {
 //   listen: { port: 4000 },context:async({req,res})=>{
@@ -31,7 +29,7 @@ const MONGODB =
 const main = async () => {
   const port = 4000;
   mongoose
-    .connect(MONGODB, {
+    .connect(process.env.MONGO_URI as string, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
     } as ConnectOptions)
