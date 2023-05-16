@@ -15,9 +15,6 @@ import bodyParser, { json } from "body-parser";
 import cookieParser from "cookie-parser";
 const EasyYandexS3 = require("easy-yandex-s3").default;
 
-const MONGODB =
-  "mongodb+srv://sironlyou:a2251616A@cluster0.0i70xle.mongodb.net/?retryWrites=true&w=majority";
-
 // startStandaloneServer(server, {
 //   listen: { port: 4000 },context:async({req,res})=>{
 //     return {req,res}
@@ -30,11 +27,18 @@ const MONGODB =
 
 const main = async () => {
   const port = 4000;
+  const origin = process.env.MOBILE_ORIGIN || process.env.CLIENT_ORIGIN;
+  dotenv.config();
+  const db = process.env.MONGO_URI;
+  console.log(db);
   mongoose
-    .connect(MONGODB, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    } as ConnectOptions)
+    .connect(
+      "mongodb+srv://sironlyou:a2251616A@cluster0.0i70xle.mongodb.net/?retryWrites=true&w=majority",
+      {
+        useNewUrlParser: true,
+        useUnifiedTopology: true,
+      } as ConnectOptions
+    )
     .then(() => {
       console.log(`Db Connected`);
     })
@@ -42,7 +46,6 @@ const main = async () => {
       console.log(err.message);
     });
 
-  dotenv.config();
   // Create the schema, which will be used separately by ApolloServer and
   // the WebSocket server.
 
@@ -67,7 +70,7 @@ const main = async () => {
   await server.start();
 
   const corsOptions = {
-    origin: process.env.CLIENT_ORIGIN,
+    origin: process.env.CLIENT_ORIGIN || process.env.MOBILE_ORIGIN,
 
     credentials: true,
   };

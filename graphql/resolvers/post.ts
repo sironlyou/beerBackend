@@ -24,6 +24,46 @@ export const resolvers = {
     },
   },
   Mutation: {
+    likedPost: async (
+      _: any,
+      args: {
+        postId: string;
+      },
+      context: GraphQLContext
+    ) => {
+      const { postId } = args;
+      const { req } = context;
+      const user: User = jwt_decode(req.cookies.token);
+      const post = Post.findOne({ _id: postId });
+      const likesArr = post.likes;
+      const likedPost = await Post.findOneAndUpdate(
+        { _id: postId },
+        { $push: { likes: user.username } },
+        { new: true }
+      );
+      return likedPost;
+    },
+    dislikedPost: async (
+      _: any,
+      args: {
+        postId: string;
+      },
+      context: GraphQLContext
+    ) => {
+      const { postId } = args;
+      const { req } = context;
+      const user: User = jwt_decode(req.cookies.token);
+      const post = Post.findOne({ _id: postId });
+      const likesArr = post.likes;
+      const dislikedPost = await Post.findOneAndUpdate(
+        { _id: postId },
+        { $pull: { likes: user.username } },
+        { new: true }
+      );
+      return dislikedPost;
+      // const likedPost = await Post.findOne({ _id: postId });
+      console.log(dislikedPost);
+    },
     createPost: async (
       _: any,
       args: {
@@ -71,14 +111,11 @@ export const resolvers = {
         authorImg,
         rating,
         image,
-        likesCount: "0",
+        likes: [],
         createdAt: new Date(),
       });
-      const res = await newPost.save();
-      return {
-        id: res.id,
-        ...res._doc,
-      };
+      await newPost.save();
+      return Post.find();
     },
     createUser: async (
       _: any,

@@ -18,9 +18,9 @@ export const typeDefs = gql`
     reviewBody: String
     rating: String
     image: String
-    likesCount: String
     createdAt: String
     authorImg: String
+    likes: [String]
   }
   type User {
     password: String
@@ -35,6 +35,8 @@ export const typeDefs = gql`
     getUser: User
   }
   type Mutation {
+    likedPost(postId: String): Post
+    dislikedPost(postId: String): Post
     createUser(
       username: String!
       password: String!
@@ -57,6 +59,6 @@ export const typeDefs = gql`
       rating: String
       image: String
       authorImg: String
-    ): Post
+    ): [Post]
   }
 `;

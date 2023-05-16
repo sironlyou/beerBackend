@@ -13,8 +13,8 @@ const postSchema = new Schema({
   reviewBody: { type: String },
   rating: { type: String },
   image: { type: String },
-  likesCount: { type: String },
   authorImg: { type: String },
+  likes: { type: [String] },
 });
 module.exports = model("Post", postSchema);
 //@ts-ignore
