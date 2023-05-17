@@ -15,6 +15,7 @@ const postSchema = new Schema({
   image: { type: String },
   authorImg: { type: String },
   likes: { type: [String] },
+  comments: { type: [String] },
 });
 module.exports = model("Post", postSchema);
 //@ts-ignore

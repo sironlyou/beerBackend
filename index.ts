@@ -14,6 +14,10 @@ import multer from "multer";
 import bodyParser, { json } from "body-parser";
 import cookieParser from "cookie-parser";
 const EasyYandexS3 = require("easy-yandex-s3").default;
+require("aws-sdk/lib/maintenance_mode_message").suppress = true;
+
+const MONGODB =
+  "mongodb+srv://sironlyou:a2251616A@cluster0.0i70xle.mongodb.net/?retryWrites=true&w=majority";
 
 // startStandaloneServer(server, {
 //   listen: { port: 4000 },context:async({req,res})=>{
@@ -29,8 +33,7 @@ const main = async () => {
   const port = 4000;
   const origin = process.env.MOBILE_ORIGIN || process.env.CLIENT_ORIGIN;
   dotenv.config();
-  const db = process.env.MONGO_URI;
-  console.log(db);
+
   mongoose
     .connect(
       "mongodb+srv://sironlyou:a2251616A@cluster0.0i70xle.mongodb.net/?retryWrites=true&w=majority",
@@ -70,7 +73,7 @@ const main = async () => {
   await server.start();
 
   const corsOptions = {
-    origin: process.env.CLIENT_ORIGIN || process.env.MOBILE_ORIGIN,
+    origin: process.env.CLIENT_ORIGIN,
 
     credentials: true,
   };

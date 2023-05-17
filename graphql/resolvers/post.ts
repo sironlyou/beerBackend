@@ -1,6 +1,8 @@
 // GraphQL Resolvers
 const Post = require("../../models/post");
 const User = require("../../models/user");
+const CommentItem = require("../../models/comment");
+const Token = require("./user");
 import { GraphQLError } from "graphql";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
@@ -10,6 +12,15 @@ import { GraphQLContext, User, UserLoginData } from "../../utils/types";
 
 export const resolvers = {
   Query: {
+    getComments: async (
+      _: any,
+      args: { postId: string },
+      context: GraphQLContext
+    ) => {
+      const { postId } = args;
+      const comments = await CommentItem.find({ postId: postId });
+      return comments;
+    },
     getPosts: async (_: any) => {
       //   const posts = await Post.find();
 
@@ -18,12 +29,32 @@ export const resolvers = {
     getUser: async (_: any, __: any, context: GraphQLContext) => {
       const { req } = context;
       const user: User = jwt_decode(req.cookies.token);
-      const username = user.id;
-      console.log(user);
       return user;
     },
   },
   Mutation: {
+    createComment: async (
+      _: any,
+      args: { postId: string; author: string; body: string },
+      context: GraphQLContext
+    ) => {
+      const { postId, body, author } = args;
+      const { req, res } = context;
+      const comment = new CommentItem({
+        author,
+        body,
+        postId,
+        createdAt: new Date(),
+      });
+      const result = await comment.save();
+      const post = await Post.findOneAndUpdate(
+        { _id: postId },
+        { $push: { comments: comment._id } },
+        { new: true }
+      );
+
+      return result;
+    },
     likedPost: async (
       _: any,
       args: {
@@ -114,8 +145,8 @@ export const resolvers = {
         likes: [],
         createdAt: new Date(),
       });
-      await newPost.save();
-      return Post.find();
+      const res = await newPost.save();
+      return res;
     },
     createUser: async (
       _: any,
@@ -134,27 +165,36 @@ export const resolvers = {
         throw new GraphQLError("user exists");
       }
       const encryptedPassword = await bcrypt.hash(password, 10);
-      const token = jwt.sign({ username, email, avatar }, "access-secret-key", {
-        expiresIn: "30m",
-      });
 
-      const user = await User({
+      const user = new User({
         avatar,
         email,
         password: encryptedPassword,
         username,
-        token,
       });
+      const newUser = await user.save();
+      console.log(newUser._id);
+      const token = jwt.sign(
+        { username, email, avatar, id: user._id },
+        "access-secret-key",
+        {
+          expiresIn: "30m",
+        }
+      );
+      const newToken = new Token({
+        userId: user._id,
+        authToken: token,
+      });
+      await newToken.save();
 
       res.cookie("token", token, {
         maxAge: 1000 * 60 * 60 * 24 * 7,
 
         httpOnly: true,
       });
-      const response = await user.save();
       return {
-        id: response.id,
-        ...response._doc,
+        id: newUser.id,
+        ...newUser._doc,
       };
     },
     loginUser: async (
@@ -181,7 +221,12 @@ export const resolvers = {
         throw new GraphQLError("INVALID PASSWORD");
       }
       const token = jwt.sign(
-        { username: user.username, email: user.email, avatar: user.avatar },
+        {
+          username: user.username,
+          email: user.email,
+          avatar: user.avatar,
+          userid: user.id,
+        },
         "access-secret-key",
         {
           expiresIn: "30m",
@@ -191,12 +236,7 @@ export const resolvers = {
         maxAge: 1000 * 60 * 60 * 24,
         httpOnly: true,
       });
-      user.token = token;
-      const response = await user.save();
-      return {
-        id: response.id,
-        ...response._doc,
-      };
+      return true;
     },
     logoutUser: async (_: any, __: any, context: GraphQLContext) => {
       const { res } = context;

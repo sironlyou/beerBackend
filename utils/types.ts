@@ -8,7 +8,6 @@ export interface User {
   username: string;
   avatar: string;
   email: string;
-  token: string;
 }
 export interface UserLoginData {
   username: string;
