@@ -2,13 +2,19 @@
 const Post = require("../../models/post");
 const User = require("../../models/user");
 const CommentItem = require("../../models/comment");
-const Token = require("./user");
+const userToken = require("../../models/token");
 import { GraphQLError } from "graphql";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 
 import jwt_decode from "jwt-decode";
-import { GraphQLContext, User, UserLoginData } from "../../utils/types";
+import {
+  Comment,
+  GraphQLContext,
+  IPost,
+  User,
+  UserLoginData,
+} from "../../utils/types";
 
 export const resolvers = {
   Query: {
@@ -18,17 +24,33 @@ export const resolvers = {
       context: GraphQLContext
     ) => {
       const { postId } = args;
-      const comments = await CommentItem.find({ postId: postId });
-      return comments;
+      const comments: [Comment] = await CommentItem.find({ postId: postId });
+      console.log(comments);
+      // const user = await User.findById({ _id: comments.author });
+      const newCommentsArr = await Promise.all(
+        comments.map(async (comment) => {
+          const user = await User.findById({ _id: comment.author });
+          return { comment, user };
+        })
+      );
+      // const arr =  newCommentsArr;
+      console.log(newCommentsArr);
+      return newCommentsArr;
     },
     getPosts: async (_: any) => {
-      //   const posts = await Post.find();
-
-      return await Post.find();
+      const posts: [IPost] = await Post.find();
+      const postsArr = await Promise.all(
+        posts.map(async (post) => {
+          const user = await User.findById({ _id: post.author });
+          return { post, user };
+        })
+      );
+      return postsArr;
     },
     getUser: async (_: any, __: any, context: GraphQLContext) => {
       const { req } = context;
       const user: User = jwt_decode(req.cookies.token);
+      console.log(user);
       return user;
     },
   },
@@ -40,20 +62,23 @@ export const resolvers = {
     ) => {
       const { postId, body, author } = args;
       const { req, res } = context;
-      const comment = new CommentItem({
+      const newComment = new CommentItem({
         author,
         body,
         postId,
         createdAt: new Date(),
       });
-      const result = await comment.save();
-      const post = await Post.findOneAndUpdate(
+      const comment = await newComment.save();
+      console.log(comment);
+      await Post.findOneAndUpdate(
         { _id: postId },
-        { $push: { comments: comment._id } },
+        { $push: { comments: newComment._id } },
         { new: true }
       );
+      const user = await User.findById({ _id: author });
+      console.log(user);
 
-      return result;
+      return { comment, user };
     },
     likedPost: async (
       _: any,
@@ -145,8 +170,10 @@ export const resolvers = {
         likes: [],
         createdAt: new Date(),
       });
-      const res = await newPost.save();
-      return res;
+      const user = await User.findById({ _id: author });
+
+      const post = await newPost.save();
+      return { post, user };
     },
     createUser: async (
       _: any,
@@ -181,7 +208,7 @@ export const resolvers = {
           expiresIn: "30m",
         }
       );
-      const newToken = new Token({
+      const newToken = new userToken({
         userId: user._id,
         authToken: token,
       });
@@ -193,7 +220,7 @@ export const resolvers = {
         httpOnly: true,
       });
       return {
-        id: newUser.id,
+        id: newUser._id,
         ...newUser._doc,
       };
     },
@@ -236,7 +263,11 @@ export const resolvers = {
         maxAge: 1000 * 60 * 60 * 24,
         httpOnly: true,
       });
-      return true;
+      // const response = await user.save();
+      return {
+        id: user.id,
+        ...user._doc,
+      };
     },
     logoutUser: async (_: any, __: any, context: GraphQLContext) => {
       const { res } = context;

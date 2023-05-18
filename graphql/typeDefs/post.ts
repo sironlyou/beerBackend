@@ -1,9 +1,6 @@
 import gql from "graphql-tag";
 
 export const typeDefs = gql`
-  type Query {
-    greetings: String
-  }
   type Comment {
     id: String
     author: String
@@ -37,17 +34,33 @@ export const typeDefs = gql`
     avatar: String
     id: String
   }
+  type getCommentsResponse {
+    comment: Comment
+    user: User
+  }
+  type createPostResponse {
+    user: User
+    post: Post
+  }
   type Query {
-    getPosts(amount: Int): [Post]
+    getPosts(amount: Int): [createPostResponse]
     getUser: User
-    getComments(postId: String): [Comment]
+    getComments(postId: String): [getCommentsResponse]
   }
   type Token {
     authToken: String
     userId: String
   }
+  type createCommentResponse {
+    user: User
+    comment: Comment
+  }
   type Mutation {
-    createComment(author: String, body: String, postId: String): Comment
+    createComment(
+      author: String
+      body: String
+      postId: String
+    ): createCommentResponse
     likedPost(postId: String): Post
     dislikedPost(postId: String): Post
     createUser(
@@ -56,7 +69,7 @@ export const typeDefs = gql`
       email: String!
       avatar: String!
     ): User
-    loginUser(login: String!, password: String!): Boolean
+    loginUser(login: String!, password: String!): User
     logoutUser: Boolean
     createPost(
       author: String
@@ -72,6 +85,6 @@ export const typeDefs = gql`
       rating: String
       image: String
       authorImg: String
-    ): Post
+    ): createPostResponse
   }
 `;
