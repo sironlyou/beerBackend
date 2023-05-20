@@ -66,7 +66,7 @@ export const resolvers = {
         author,
         body,
         postId,
-        createdAt: new Date(),
+        createdAt: Date.now(),
       });
       const comment = await newComment.save();
       console.log(comment);
@@ -92,6 +92,7 @@ export const resolvers = {
       const user: User = jwt_decode(req.cookies.token);
       const post = Post.findOne({ _id: postId });
       const likesArr = post.likes;
+      console.log(likesArr);
       const likedPost = await Post.findOneAndUpdate(
         { _id: postId },
         { $push: { likes: user.username } },
@@ -168,7 +169,7 @@ export const resolvers = {
         rating,
         image,
         likes: [],
-        createdAt: new Date(),
+        createdAt: Date.now(),
       });
       const user = await User.findById({ _id: author });
 
