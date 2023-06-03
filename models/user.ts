@@ -4,6 +4,11 @@ const userSchema = new Schema({
   password: { type: String, required: true },
   email: { type: String, unique: true },
   avatar: { type: String },
+  dateOfBirth: { type: String },
+  sentRequests: { type: [String], default: [] },
+  incomingRequests: { type: [String], default: [] },
+  friends: { type: [String], default: [] },
+  karma: { type: String, default: "0" },
 });
 module.exports = model("User", userSchema);
 //@ts-ignore

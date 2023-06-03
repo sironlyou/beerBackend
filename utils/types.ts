@@ -1,7 +1,12 @@
 import { Request, Response } from "express";
+import { PubSub } from "graphql-subscriptions";
+import { Context } from "graphql-ws/lib/server";
+
 export interface GraphQLContext {
   req: Request;
   res: Response;
+  pubsub: PubSub;
+  userId: string;
 }
 export interface User {
   id: string;
@@ -22,6 +27,12 @@ export interface Comment {
   createdAt: string;
   postId: string;
 }
+export interface IConversation {
+  id: string;
+  participants: [string];
+  messages: [string];
+  visibleFor: [string];
+}
 export interface IPost {
   id: string;
 
@@ -41,4 +52,13 @@ export interface IPost {
   authorImg: String;
   likes: string[];
   comments: string[];
+}
+export interface SubscriptionContext {
+  pubsub: PubSub;
+  req: Request;
+}
+export interface SubscriptionContext extends Context {
+  connectionParams: {
+    userId: string;
+  };
 }
