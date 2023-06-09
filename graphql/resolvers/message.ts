@@ -6,20 +6,14 @@ const UserModel = require("../../models/user");
 
 import { GraphQLError } from "graphql";
 import { withFilter } from "graphql-subscriptions";
+import { userInfo } from "os";
 
 const resolvers = {
   Query: {
-    getMessages: async (
-      _: any,
-      args: { conversationid: string; participantId: string }
-    ) => {
-      const { conversationid, participantId } = args;
-      const userInfo = await UserModel.findById({ _id: participantId });
+    getMessages: async (_: any, args: { conversationid: string }) => {
+      const { conversationid } = args;
       const messages = await Message.find({ conversation: conversationid });
-      return {
-        messages,
-        userInfo,
-      };
+      return messages;
     },
     getUnreadCount: async (
       _: any,
@@ -33,7 +27,7 @@ const resolvers = {
         conversation: conversationId,
         readBy: { $ne: [user.id] },
       });
-      console.log(messagesArr.length);
+      // console.log(messagesArr.length);
       return messagesArr.length;
     },
     getLatestMessage: async (_: any, args: { conversationId: string }) => {
@@ -41,7 +35,7 @@ const resolvers = {
       const message = await Message.find({ conversation: conversationId })
         .sort({ createdAt: -1 })
         .limit(1); // 10 latest docs
-      console.log(message);
+      // console.log(message);
       return message[0];
     },
   },
@@ -59,7 +53,7 @@ const resolvers = {
     ) => {
       const { body, conversationId, media, receiverId } = args;
       const { pubsub, req } = context;
-      // const user: User = req.cookies.token;
+      const user: User = jwtDecode(req.cookies.token);
       const conversation = await Conversation.findOne({ _id: conversationId });
       if (!conversation.visibleFor.includes("userId"))
         conversation.visibleFor.push("userId");
@@ -69,13 +63,13 @@ const resolvers = {
       }
       const msg = new Message({
         conversation: conversationId,
-        senderId: "12",
+        senderId: user.id,
         body: body,
         media: media,
         createdAt: Date.now(),
         updatedAt: Date.now(),
-        readBy: ["12"],
-        visibleFor: ["12", receiverId],
+        readBy: [user.id],
+        visibleFor: [user.id, receiverId],
       });
       const message = await msg.save();
       conversation.messages.push(message._id);
@@ -88,7 +82,8 @@ const resolvers = {
       args: { messageId: string; conversationId: string; receiverId: string },
       context: GraphQLContext
     ) => {
-      const { pubsub } = context;
+      const { pubsub, req } = context;
+      const user: User = jwtDecode(req.cookies.token);
       const { conversationId, messageId, receiverId } = args;
       const message = Message.findById({ _id: messageId });
       Message.create({
@@ -98,8 +93,8 @@ const resolvers = {
         media: message.media,
         createdAt: message.createdAt,
         updatedAt: Date.now(),
-        readBy: ["userID"],
-        visibleFor: [receiverId, "userID"],
+        readBy: [user.id],
+        visibleFor: [receiverId, user.id],
       });
       pubsub.publish("MESSAGE_FORWARDED", { message: message });
       return message;
@@ -124,18 +119,19 @@ const resolvers = {
       args: { idArr: [string] },
       context: GraphQLContext
     ) => {
-      const { pubsub } = context;
+      const { pubsub, req } = context;
+      const user: User = jwtDecode(req.cookies.token);
       const { idArr } = args;
-      console.log(idArr);
+      // console.log(idArr);
 
       for (let id of idArr) {
         await Message.findOneAndUpdate(
           { _id: id },
-          { $pull: { visibleFor: "321" } }
+          { $pull: { visibleFor: user.id } }
         );
       }
       pubsub.publish("DELETED_MESSAGES_FOR_ME", {
-        messagesDeletedForMe: { messages: idArr, userId: "123" },
+        messagesDeletedForMe: { messages: idArr, userId: user.id },
       });
       return true;
     },
@@ -161,6 +157,21 @@ const resolvers = {
 
       return true;
     },
+    readMessage: async (
+      _: any,
+      args: { message: string },
+      context: GraphQLContext
+    ) => {
+      const { message } = args;
+      const { req, pubsub } = context;
+      const user: User = jwtDecode(req.cookies.token);
+      const readMessage = await Message.findOneAndUpdate(
+        { _id: message },
+        { $push: { readBy: user.id } }
+      );
+      pubsub.publish("MESSAGE_READ", { messageRead: readMessage._id });
+      return true;
+    },
   },
   Subscription: {
     messageSent: {
@@ -170,8 +181,20 @@ const resolvers = {
           return pubsub.asyncIterator(["MESSAGE_SENT"]);
         },
         (payload, args, context) => {
-          console.log(payload);
-          return payload.messageSent.conversation === args.conversationId;
+          console.log("args", args.conversationId);
+          return args.conversationId.includes(payload.messageSent.conversation);
+        }
+      ),
+    },
+    messageRead: {
+      subscribe: withFilter(
+        (_: any, __: any, context: SubscriptionContext) => {
+          const { pubsub } = context;
+          return pubsub.asyncIterator(["MESSAGE_READ"]);
+        },
+        (payload, args, context) => {
+          // console.log(payload);
+          return true;
         }
       ),
     },
@@ -182,7 +205,7 @@ const resolvers = {
           return pubsub.asyncIterator(["MESSAGE_EDITED"]);
         },
         (payload, args, context) => {
-          console.log(payload);
+          // console.log(payload);
           return true;
           // return payload.message.visibleFor.includes('123')
         }
@@ -195,7 +218,7 @@ const resolvers = {
           return pubsub.asyncIterator(["DELETED_MESSAGES_FOR_ME"]);
         },
         (payload, args, context) => {
-          console.log(payload);
+          // console.log(payload);
           return true;
           // return payload.userId===userId
         }
@@ -208,7 +231,7 @@ const resolvers = {
           return pubsub.asyncIterator(["MESSAGES_DELETED"]);
         },
         (payload, args, context) => {
-          console.log(payload);
+          // console.log(payload);
           return true;
           payload.conversation.participants.includes("userID");
         }

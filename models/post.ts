@@ -18,17 +18,16 @@ const postSchema = new Schema({
   comments: { type: [String] },
 });
 module.exports = model("Post", postSchema);
-//@ts-ignore
-// const post = [
-//   "author",
-//   "createdAt",
-//   "beerName",
-//   "reviewBody",
-//   "alcohol",
-//   "rating",
-//   "price /5",
-//   "alcohol/5",
-//   "quality/5",
-//   "taste",
-//   "image",
-// ];
+
+/*
+
+community:{
+  admins:[]
+  posts:[id]
+  avatar:string
+  info:string
+  members:[id]
+  
+}
+
+*/

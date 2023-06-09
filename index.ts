@@ -4,7 +4,7 @@ import { startStandaloneServer } from "@apollo/server/standalone";
 import cors from "cors";
 import resolvers from "./graphql/resolvers/";
 import mongoose, { ConnectOptions } from "mongoose";
-import { typeDefs } from "./graphql/typeDefs";
+import { typeDefs } from "./graphql/typeDefs/index";
 import { GraphQLContext, SubscriptionContext } from "./utils/types";
 import { ApolloServerPluginDrainHttpServer } from "@apollo/server/plugin/drainHttpServer";
 import { expressMiddleware } from "@apollo/server/express4";

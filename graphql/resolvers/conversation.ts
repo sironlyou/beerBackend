@@ -8,24 +8,50 @@ const UserModel = require("../../models/user");
 
 const resolvers = {
   Query: {
+    getAllConversationIds: async (_: any, __: any, context: GraphQLContext) => {
+      const { req } = context;
+      const user: User = jwtDecode(req.cookies.token);
+      const conversations: [IConversation] = await Conversation.find({
+        participants: user.id,
+      });
+      const conversationsArray = conversations.map((convo) => convo.id);
+      return conversationsArray;
+    },
+    getConversationId: async (
+      _: any,
+      args: { participantId: string },
+      context: GraphQLContext
+    ) => {
+      const { participantId } = args;
+      const { req } = context;
+      const user: User = jwtDecode(req.cookies.token);
+      const conversation = await Conversation.find({
+        participants: { $all: [participantId, user.id] },
+      });
+
+      return conversation[0];
+    },
     getConversations: async (_: any, __: any, context: GraphQLContext) => {
       const { req } = context;
       const user: User = jwtDecode(req.cookies.token);
       const conversations: [IConversation] = await Conversation.find({
         participants: user.id,
       });
-      console.log(conversations);
       const conversationArray = await Promise.all(
         conversations.map(async (conversation) => {
           const userId = conversation.participants.filter(
             (e: string) => e !== user.id
           );
-          console.log("userId", userId);
+          const message = await Message.find({ conversation: conversation.id })
+            .sort({ createdAt: -1 })
+            .limit(1); // 10 latest docs
+          const latestMessage = message[0];
+
           const userItem: User = await UserModel.findById({
             _id: userId[0],
           });
 
-          return { conversation, userItem };
+          return { conversation, userItem, latestMessage };
         })
       );
       return conversationArray;
@@ -53,27 +79,34 @@ const resolvers = {
       context: GraphQLContext
     ) => {
       const { req, pubsub } = context;
+
       const { receiver } = args;
-      // const user: User = jwtDecode(req.cookies.token);
-      const participantsArray = [receiver, "321"];
-      const convo = await Conversation.findOne({
+      const user: User = jwtDecode(req.cookies.token);
+      const participantsArray = [user.id, receiver];
+      const conversation = await Conversation.findOne({
         participants: participantsArray,
       });
-
-      if (!convo) {
-        const conversation = new Conversation({
+      const userItem = await UserModel.findById({ _id: receiver });
+      if (!conversation) {
+        const convo = new Conversation({
           participants: participantsArray,
           visibleFor: participantsArray,
         });
-        const convo = await conversation.save();
 
-        // console.log("last call", convo);
+        const conversation = await convo.save();
         pubsub.publish("CONVERSATION_CREATED", {
-          conversationCreated: convo,
+          conversationCreated: {
+            conversation: conversation,
+            userItem: userItem,
+          },
         });
-        return convo;
+        return { conversation, userItem };
       } else {
-        return convo;
+        const message = await Message.find({ conversation: conversation.id })
+          .sort({ createdAt: -1 })
+          .limit(1); // 10 latest docs
+        const latestMessage = message[0];
+        return { conversation, userItem, latestMessage };
       }
     },
 
@@ -102,21 +135,22 @@ const resolvers = {
       args: { conversationId: string; userId: string },
       context: GraphQLContext
     ) => {
-      const { pubsub } = context;
+      const { pubsub, req } = context;
       const { conversationId, userId } = args;
+      const user: User = jwtDecode(req.cookies.token);
       const messages = await Message.updateMany(
         { conversation: conversationId },
-        { $pull: { visibleFor: "646b0eca5fe3e878052fa299" } },
+        { $pull: { visibleFor: user.id } },
         { new: true }
       );
       const convo = await Conversation.findOneAndUpdate(
         { _id: conversationId },
-        { $pull: { visibleFor: "646b0eca5fe3e878052fa299" } }
+        { $pull: { visibleFor: user.id } }
       );
       pubsub.publish("CONVERSATION_DELETED_FOR_ONE", {
         conversationDeletedForOne: {
           conversation: conversationId,
-          userId: "646b0eca5fe3e878052fa299",
+          userId: user.id,
         },
       });
       return conversationId;
@@ -155,12 +189,12 @@ const resolvers = {
           return pubsub.asyncIterator(["CONVERSATION_CREATED"]);
         },
         (payload, _, context) => {
-          // const { userId } = context;
-          console.log(payload);
-          // console.log("id", userId);
+          const { userId } = context;
+
           const { conversationCreated } = payload;
 
-          if (conversationCreated.participants.includes("123")) return true;
+          if (conversationCreated.conversation.participants.includes(userId))
+            return true;
           else return false;
         }
       ),
@@ -169,14 +203,13 @@ const resolvers = {
       subscribe: withFilter(
         (_: any, __: any, context: GraphQLContext) => {
           const { pubsub } = context;
+
           return pubsub.asyncIterator(["CONVERSATION_DELETED_FOR_ONE"]);
         },
         (payload, args, context) => {
-          console.log(payload);
-          return (
-            payload.conversationDeletedForOne.userId ===
-            "646b0eca5fe3e878052fa299"
-          );
+          const { userId } = context;
+
+          return payload.conversationDeletedForOne.userId === userId;
         }
       ),
     },
@@ -187,9 +220,9 @@ const resolvers = {
           return pubsub.asyncIterator(["CONVERSATION_DELETED_FOR_EVERYONE"]);
         },
         (payload, args, context) => {
-          return true;
+          const { userId } = context;
           return payload.conversationDeletedForEveryone.conversation.includes(
-            "646b0eca5fe3e878052fa299"
+            userId
           );
         }
       ),
