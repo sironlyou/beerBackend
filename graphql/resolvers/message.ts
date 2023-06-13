@@ -27,7 +27,6 @@ const resolvers = {
         conversation: conversationId,
         readBy: { $ne: [user.id] },
       });
-      // console.log(messagesArr.length);
       return messagesArr.length;
     },
     getLatestMessage: async (_: any, args: { conversationId: string }) => {
@@ -35,7 +34,7 @@ const resolvers = {
       const message = await Message.find({ conversation: conversationId })
         .sort({ createdAt: -1 })
         .limit(1); // 10 latest docs
-      // console.log(message);
+
       return message[0];
     },
   },
@@ -122,7 +121,6 @@ const resolvers = {
       const { pubsub, req } = context;
       const user: User = jwtDecode(req.cookies.token);
       const { idArr } = args;
-      // console.log(idArr);
 
       for (let id of idArr) {
         await Message.findOneAndUpdate(
@@ -181,7 +179,6 @@ const resolvers = {
           return pubsub.asyncIterator(["MESSAGE_SENT"]);
         },
         (payload, args, context) => {
-          console.log("args", args.conversationId);
           return args.conversationId.includes(payload.messageSent.conversation);
         }
       ),
@@ -193,7 +190,6 @@ const resolvers = {
           return pubsub.asyncIterator(["MESSAGE_READ"]);
         },
         (payload, args, context) => {
-          // console.log(payload);
           return true;
         }
       ),
@@ -205,7 +201,6 @@ const resolvers = {
           return pubsub.asyncIterator(["MESSAGE_EDITED"]);
         },
         (payload, args, context) => {
-          // console.log(payload);
           return true;
           // return payload.message.visibleFor.includes('123')
         }
@@ -218,7 +213,6 @@ const resolvers = {
           return pubsub.asyncIterator(["DELETED_MESSAGES_FOR_ME"]);
         },
         (payload, args, context) => {
-          // console.log(payload);
           return true;
           // return payload.userId===userId
         }
@@ -231,7 +225,6 @@ const resolvers = {
           return pubsub.asyncIterator(["MESSAGES_DELETED"]);
         },
         (payload, args, context) => {
-          // console.log(payload);
           return true;
           payload.conversation.participants.includes("userID");
         }

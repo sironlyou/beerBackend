@@ -54,7 +54,6 @@ const resolvers = {
       const user: User = jwt_decode(req.cookies.token);
       const post = Post.findOne({ _id: postId });
       const likesArr = post.likes;
-      console.log(likesArr);
       const likedPost = await Post.findOneAndUpdate(
         { _id: postId },
         { $push: { likes: user.username } },
@@ -81,7 +80,6 @@ const resolvers = {
       );
       return dislikedPost;
       // const likedPost = await Post.findOne({ _id: postId });
-      console.log(dislikedPost);
     },
     createPost: async (
       _: any,

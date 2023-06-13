@@ -34,7 +34,6 @@ const resolvers = {
       const participantId = conversation.participants.filter(
         (p) => p !== user.id
       );
-      // console.log(participantId);
       return await User.findById({ _id: participantId });
     },
     getUsers: async (_: any, args: { username: string }) => {
@@ -48,7 +47,6 @@ const resolvers = {
     getUser: async (_: any, __: any, context: GraphQLContext) => {
       const { req } = context;
       const user: User = jwt_decode(req.cookies.token);
-      // console.log(user);
       return user;
     },
     getFriends: async (
@@ -129,7 +127,7 @@ const resolvers = {
         },
         { new: true }
       );
-      // console.log("user", user);
+
       pubsub.publish("INCOMING_REQUEST_APPROVED", {
         incomingRequestApproved: user,
       });
@@ -224,7 +222,6 @@ const resolvers = {
         birthDate,
       });
       const newUser = await user.save();
-      // console.log(newUser._id);
       const token = jwt.sign(
         { username, email, avatar, id: user._id },
         "access-secret-key",
@@ -258,9 +255,7 @@ const resolvers = {
     ) => {
       const { login, password } = args;
       const { res, req } = context;
-      // console.log(args);
-      // console.log(context);
-      // console.log(req.cookies.token);
+
       let user;
       login.includes("@")
         ? (user = await User.findOne({ email: login }))
@@ -307,16 +302,9 @@ const resolvers = {
       subscribe: withFilter(
         (_: any, __: any, context: SubscriptionContext) => {
           const { pubsub } = context;
-          // console.log(pubsub.asyncIterator(["REQUEST_SENT"]));
           return pubsub.asyncIterator(["REQUEST_SENT"]);
         },
         (payload, args, context) => {
-          // console.log(payload);
-          // console.log(context);
-          // console.log(args);
-          // console.log(
-          //   payload.requestSent.sentRequests.includes(args.recieverUserId)
-          // );
           if (payload.requestSent.sentRequests.includes(args.recieverUserId))
             return true;
           else return false;
@@ -343,8 +331,6 @@ const resolvers = {
           return pubsub.asyncIterator(["REQUEST_APPROVED"]);
         },
         (payload, args, context) => {
-          // console.log(payload);
-          // console.log(context);
           //достать айди из контекста а не аргументом
           return payload.requestApproved.friends.includes(args.senderUserId);
         }
@@ -357,7 +343,6 @@ const resolvers = {
           return pubsub.asyncIterator(["INCOMING_REQUEST_APPROVED"]);
         },
         (payload, args, context) => {
-          // console.log(payload);
           return payload.incomingRequestApproved.friends.includes(
             args.senderUserId
           );
@@ -371,7 +356,6 @@ const resolvers = {
           return pubsub.asyncIterator(["REMOVE_FRIEND"]);
         },
         (payload, args, context) => {
-          // console.log(payload);
           return payload.requestAcquired.sentRequests.includes(args.id);
         }
       ),
@@ -383,7 +367,6 @@ const resolvers = {
           return pubsub.asyncIterator(["GET_REMOVED_FROM_FRIENDS"]);
         },
         (payload, args, context) => {
-          // console.log(payload);
           return payload.getRemovedFromFriends.incomingRequests.includes(
             args.id
           );
@@ -397,7 +380,6 @@ const resolvers = {
           return pubsub.asyncIterator(["SENT_REQUEST_CANCELED"]);
         },
         (payload, args, context) => {
-          // console.log(payload);
           return payload.sentRequestCanceled.incomingRequests.includes(args.id);
         }
       ),
@@ -409,7 +391,6 @@ const resolvers = {
           return pubsub.asyncIterator(["INCOMING_REQUEST_CANCELED"]);
         },
         (payload, args, context) => {
-          // console.log(payload);
           return payload.incomingRequestCanceled.sentRequests.includes(args.id);
         }
       ),

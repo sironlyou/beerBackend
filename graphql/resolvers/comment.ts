@@ -18,7 +18,6 @@ const resolvers = {
     ) => {
       const { postId } = args;
       const comments: [Comment] = await CommentItem.find({ postId: postId });
-      console.log(comments);
       // const user = await User.findById({ _id: comments.author });
       const newCommentsArr = await Promise.all(
         comments.map(async (comment) => {
@@ -27,7 +26,6 @@ const resolvers = {
         })
       );
       // const arr =  newCommentsArr;
-      console.log(newCommentsArr);
       return newCommentsArr;
     },
   },
@@ -46,14 +44,12 @@ const resolvers = {
         createdAt: Date.now(),
       });
       const comment = await newComment.save();
-      console.log(comment);
       await Post.findOneAndUpdate(
         { _id: postId },
         { $push: { comments: newComment._id } },
         { new: true }
       );
       const user = await User.findById({ _id: author });
-      console.log(user);
 
       return { comment, user };
     },
